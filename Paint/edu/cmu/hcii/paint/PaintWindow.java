@@ -13,7 +13,9 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
     private JPanel toolPanel;
     private JPanel rPanel, gPanel, bPanel;
     private JSlider rSlider, bSlider, gSlider;
+    private JSlider thicknessSlider;
     private JPanel colorPanel;
+    private JPanel thicknessPanel;
     private JPanel controlPanel;
 	private JScrollPane canvasPane;
     private Actions actions;
@@ -26,7 +28,7 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         
         public void stateChanged(ChangeEvent changeEvent) {
             
-	        objectConstructor.setColor(new Color(rSlider.getValue(), gSlider.getValue(), gSlider.getValue()));
+	        objectConstructor.setColor(new Color(rSlider.getValue(), gSlider.getValue(), bSlider.getValue()));
             repaint();
             
         }
@@ -49,7 +51,8 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         super("Paint");
      
         actions = new Actions(this);
-        
+        actions.undoAction.setEnabled(false);
+
         setResizable(true);
         
         setBackground(new Color(128, 10, 160));
@@ -73,7 +76,12 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         eraserButton.setOpaque(false);
         lineButton = new JRadioButton("Line");
         lineButton.setOpaque(false);
-        
+        lineButton.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent actionEvent) {
+                setPaintObjectClass(loadPaintObjectClass("edu.cmu.hcii.paint.LinePaint"));
+            }
+        });
+
         toolButtonGroup = new ButtonGroup();
         toolButtonGroup.add(pencilButton);
         toolButtonGroup.add(eraserButton);
@@ -118,7 +126,19 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         colorPanel.add(bPanel);
         currentColorComponent.setPreferredSize(new Dimension(100, 50));
         colorPanel.add(currentColorComponent);
-                
+
+    thicknessPanel = new JPanel(new FlowLayout());
+    thicknessPanel.setOpaque(false);
+    thicknessPanel.add(new JLabel("Thickness"));
+    thicknessSlider = new JSlider(1, 50, 5);
+    thicknessSlider.setOpaque(false);
+    thicknessSlider.addChangeListener(new ChangeListener() {
+      public void stateChanged(ChangeEvent changeEvent) {
+        objectConstructor.setThickness(thicknessSlider.getValue());
+      }
+    });
+    thicknessPanel.add(thicknessSlider);
+
         controlPanel = new JPanel();
         GridBagLayout controlPanelGridBag = new GridBagLayout();
         GridBagConstraints constraints = new GridBagConstraints();
@@ -133,6 +153,7 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         controlPanel.setOpaque(false);
         controlPanel.add(toolPanel);
         controlPanel.add(colorPanel);
+		controlPanel.add(thicknessPanel);
         controlPanel.add(clearUndoPanel);
         
         canvasPane = new JScrollPane(canvas);
@@ -151,7 +172,7 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         objectConstructor = new PaintObjectConstructor(this);
         objectConstructor.setClass(PencilPaint.class);
         objectConstructor.setColor(new Color(0, 255, 0));
-        objectConstructor.setThickness(5);        
+        objectConstructor.setThickness(thicknessSlider.getValue());
         canvas.addMouseListener(objectConstructor);
         canvas.addMouseMotionListener(objectConstructor);
         
@@ -160,23 +181,32 @@ public class PaintWindow extends JFrame implements PaintObjectConstructorListene
         
     }
     
-    public void setPaintObjectClass(Class paintObjectClass) {
-        
+    public void setPaintObjectClass(Class<?> paintObjectClass) {
+
         objectConstructor.setClass(paintObjectClass);
                 
     }
 
-    public void undo() { 
+  private Class<?> loadPaintObjectClass(String className) {
+    try {
+      return Class.forName(className);
+    } catch(ClassNotFoundException exception) {
+      throw new IllegalStateException("Unable to load paint object class: " + className, exception);
+    }
+  }
+
+    public void undo() {
         
         canvas.undo(); 
-        if(canvas.sizeOfHistory() == 0) actions.undoAction.setEnabled(false);
-    
+        actions.undoAction.setEnabled(canvas.sizeOfHistory() > 0);
+
     }
     
     public void clear() { 
         
         canvas.clear(); 
-    
+        actions.undoAction.setEnabled(true);
+
     }
     
     public void constructionBeginning(PaintObject temporaryObject) {

@@ -11,11 +11,13 @@ public class PaintCanvas extends JPanel {
 
     private PaintObject temporaryObject;
     private PaintObject hoveringObject;
-    
+    private static final int CANVAS_PADDING = 50;
+
     public PaintCanvas(int initialWidth, int initialHeight) {
         
         setPreferredSize(new Dimension(initialWidth, initialHeight));
-        
+        setBackground(Color.white);
+
         paintObjects = new Vector();
         
         history = new Vector();
@@ -23,17 +25,20 @@ public class PaintCanvas extends JPanel {
     }
     
     public void paintComponent(Graphics g) {
-        
-		((Graphics2D) g).addRenderingHints(
+    super.paintComponent(g);
+    ((Graphics2D) g).addRenderingHints(
 			new java.awt.RenderingHints(
 				java.awt.RenderingHints.KEY_ANTIALIASING,
 				java.awt.RenderingHints.VALUE_ANTIALIAS_ON));
         
         Rectangle clipBounds = g.getClipBounds();
-        g.setColor(Color.white);
-        g.fillRect((int)clipBounds.getX(), (int)clipBounds.getX(), 
-                    (int)clipBounds.getWidth(), (int)clipBounds.getHeight());
-        
+    g.setColor(getBackground());
+    if(clipBounds != null)
+      g.fillRect((int)clipBounds.getX(), (int)clipBounds.getY(),
+                  (int)clipBounds.getWidth(), (int)clipBounds.getHeight());
+    else
+      g.fillRect(0, 0, getWidth(), getHeight());
+
         Iterator paintObjectIterator = paintObjects.iterator();
         while(paintObjectIterator.hasNext())
 			try {
@@ -75,6 +80,15 @@ public class PaintCanvas extends JPanel {
         
         history.addElement(new Vector(paintObjects));
         paintObjects.addElement(newObject);
+
+    Rectangle bounds = newObject.getBoundingBox();
+    Dimension current = getPreferredSize();
+    int requiredWidth = Math.max(current.width, bounds.x + bounds.width + CANVAS_PADDING);
+    int requiredHeight = Math.max(current.height, bounds.y + bounds.height + CANVAS_PADDING);
+    if(requiredWidth != current.width || requiredHeight != current.height) {
+      setPreferredSize(new Dimension(requiredWidth, requiredHeight));
+      revalidate();
+    }
         repaint();
         
     }
@@ -89,9 +103,13 @@ public class PaintCanvas extends JPanel {
 
     public void undo() { 
         
+		if(history.size() == 0)
+			return;
+
         paintObjects = (Vector)history.lastElement();
         history.removeElement(history.lastElement());
-        
+		repaint();
+
     }
 
 

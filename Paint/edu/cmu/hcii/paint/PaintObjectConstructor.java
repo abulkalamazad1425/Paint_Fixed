@@ -7,7 +7,7 @@ public class PaintObjectConstructor implements MouseListener, MouseMotionListene
 
     private Vector pointsGathered;
     private PaintObjectConstructorListener constructorListener;
-    private Class paintObjectClass;
+    private Class<?> paintObjectClass;
     private PaintObject temporaryObject;
     
     private Color color;
@@ -22,8 +22,8 @@ public class PaintObjectConstructor implements MouseListener, MouseMotionListene
     public void setThickness(int thickness) { this.thickness = thickness; }
     public void setColor(Color color) { this.color = color; }
     public Color getColor() { return this.color; }
-    public void setClass(Class paintObjectClass) { this.paintObjectClass = paintObjectClass; }
-    
+    public void setClass(Class<?> paintObjectClass) { this.paintObjectClass = paintObjectClass; }
+
 	public void mouseClicked(MouseEvent e) {} 
     public void mouseEntered(MouseEvent e) {} 
     
@@ -44,12 +44,10 @@ public class PaintObjectConstructor implements MouseListener, MouseMotionListene
         pointsGathered = new Vector();
         pointsGathered.addElement(e.getPoint());
         
-        try {
-            temporaryObject = (PaintObject)paintObjectClass.newInstance();
-        } catch(Exception exception) { 
-        	System.err.println("There was a problem making the paint object.");
-        }
-        
+        temporaryObject = instantiatePaintObject();
+        if(temporaryObject == null)
+			return;
+
         	temporaryObject.setColor(color);
         	temporaryObject.setThickness(thickness);
         
@@ -83,11 +81,13 @@ public class PaintObjectConstructor implements MouseListener, MouseMotionListene
     private PaintObject makeHoveringPrototype(Point p) {
     	
 		PaintObject prototype = null;
-		try {
-			prototype = (PaintObject)paintObjectClass.newInstance();
-		} catch(Exception exception) {
+    try {
+      prototype = instantiatePaintObject();
+    } catch(Exception exception) {
 			System.err.println("There was a problem making the paint object.");
 		}
+    if(prototype == null)
+      return null;
 		Point[] points = new Point[2];
 		points[0] = points[1] = p;
 		prototype.define(points);
@@ -97,5 +97,16 @@ public class PaintObjectConstructor implements MouseListener, MouseMotionListene
 		return prototype;
 			
     }
+
+  private PaintObject instantiatePaintObject() {
+    if(paintObjectClass == null)
+      return null;
+    try {
+      return (PaintObject)paintObjectClass.getDeclaredConstructor().newInstance();
+    } catch(Exception exception) {
+      System.err.println("There was a problem making the paint object.");
+      return null;
+    }
+  }
 
 }
